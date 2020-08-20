@@ -69,6 +69,35 @@ installExtensionFromTgz()
     docker-php-ext-enable ${extensionName} $2
 }
 
+if [[ -z "${EXTENSIONS##*,oracle,*}" ]]; then
+    echo "---------- Install Oracle Instantclient ----------"
+    unzip -d /usr/local/ /tmp/extensions/instantclient_11_2.zip && \
+    chmod +x -R /usr/local/instantclient_11_2/* && \
+    ln -s /usr/local/instantclient_11_2 /${ORACLE_HOME} && \
+    ln -s /usr/local/instantclient_11_2 /usr/local/instantclient_10_2 && \
+    ln -s /${ORACLE_HOME}/libclntsh.so.* /${ORACLE_HOME}/libclntsh.so && \
+    ln -s /${ORACLE_HOME}/libocci.so.* /${ORACLE_HOME}/libocci.so && \
+    ln -s /${ORACLE_HOME}/lib* /usr/lib && \
+    ln -s /${ORACLE_HOME}/sqlplus /usr/bin/sqlplus && \
+    ln -s /usr/lib/libnsl.so.2.0.0  /usr/lib/libnsl.so.1
+fi
+
+if [[ -z "${EXTENSIONS##*,oci8,*}" ]]; then
+    echo "---------- Install oci8 ----------"
+    # echo "instantclient,/usr/local/instantclient" | pecl install oci8-2.0.12 && \
+    # echo 'extension=oci8.so' > /usr/local/etc/php/conf.d/docker-php-ext-oci8.ini \
+    docker-php-ext-configure oci8 --with-oci8=instantclient,/usr/local/instantclient && \
+	docker-php-ext-install  oci8 && \
+    docker-php-ext-enable oci8
+	# docker-php-ext-install ${MC} oci8
+fi
+
+if [[ -z "${EXTENSIONS##*,pdo_oci,*}" ]]; then
+    echo "---------- Install pdo_oci ----------"
+    docker-php-ext-configure pdo_oci --with-pdo-oci=instantclient,/usr/local/instantclient,11.2 && \ 
+	docker-php-ext-install ${MC} pdo_oci
+    docker-php-ext-enable pdo_oci
+fi
 
 if [[ -z "${EXTENSIONS##*,pdo_mysql,*}" ]]; then
     echo "---------- Install pdo_mysql ----------"
@@ -154,11 +183,6 @@ if [[ -z "${EXTENSIONS##*,pdo_dblib,*}" ]]; then
 	docker-php-ext-install ${MC} pdo_dblib
 fi
 
-if [[ -z "${EXTENSIONS##*,pdo_oci,*}" ]]; then
-    echo "---------- Install pdo_oci ----------"
-	docker-php-ext-install ${MC} pdo_oci
-fi
-
 if [[ -z "${EXTENSIONS##*,pdo_odbc,*}" ]]; then
     echo "---------- Install pdo_odbc ----------"
 	docker-php-ext-install ${MC} pdo_odbc
@@ -174,11 +198,6 @@ if [[ -z "${EXTENSIONS##*,pgsql,*}" ]]; then
     echo "---------- Install pgsql ----------"
     apk --no-cache add postgresql-dev \
     && docker-php-ext-install ${MC} pgsql
-fi
-
-if [[ -z "${EXTENSIONS##*,oci8,*}" ]]; then
-    echo "---------- Install oci8 ----------"
-	docker-php-ext-install ${MC} oci8
 fi
 
 if [[ -z "${EXTENSIONS##*,odbc,*}" ]]; then
@@ -462,8 +481,9 @@ if [[ -z "${EXTENSIONS##*,redis,*}" ]]; then
     if [[ "$?" = "1" ]]; then
         installExtensionFromTgz redis-5.0.2
     else
-        printf "\n" | pecl install redis-4.3.0
-        docker-php-ext-enable redis
+        # printf "\n" | pecl install redis-4.3.0
+        # docker-php-ext-enable redis
+        installExtensionFromTgz redis-4.3.0
     fi
 fi
 
